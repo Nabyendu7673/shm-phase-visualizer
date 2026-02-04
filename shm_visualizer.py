@@ -3,12 +3,56 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Arc
 
-# ================= Page Setup =================
-st.set_page_config(page_title="SHM Projection", layout="wide")
-st.title("Harmonic Motion: UCM Projection")
+# ================= Page Setup & Professional CSS =================
+st.set_page_config(page_title="SHM Lab", layout="wide")
 
-# ================= Sidebar =================
-st.sidebar.header("Physical Parameters")
+st.markdown("""
+    <style>
+    /* Dark Theme Background */
+    .stApp {
+        background-color: #0d1117;
+        color: #c9d1d9;
+    }
+    
+    /* Sidebar Styling */
+    section[data-testid="stSidebar"] {
+        background-color: #161b22 !important;
+        border-right: 1px solid #30363d;
+    }
+
+    /* Button Styling */
+    .stButton>button {
+        width: 100%;
+        border-radius: 6px;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    
+    /* Freeze Button (Green) */
+    div[data-testid="column"]:nth-child(1) .stButton>button {
+        background-color: #238636;
+        color: white;
+        border: 1px solid rgba(240,246,252,0.1);
+    }
+    
+    /* Reset Button (Red) */
+    div[data-testid="column"]:nth-child(2) .stButton>button {
+        background-color: #da3633;
+        color: white;
+        border: 1px solid rgba(240,246,252,0.1);
+    }
+
+    .stButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+st.title("Harmonic Motion: Phase Projection Lab")
+
+# ================= Sidebar Controls =================
+st.sidebar.header("🕹️ Simulation Controls")
 A = st.sidebar.slider("Amplitude (A)", 0.5, 5.0, 2.0, 0.1)
 omega = st.sidebar.slider("Angular Frequency (ω)", 0.1, 5.0, 1.0, 0.1)
 
@@ -18,11 +62,12 @@ phi = phi_map[phi_label]
 
 t = st.sidebar.slider("Time (t)", 0.0, 10.0, 0.01)
 
+st.sidebar.markdown("---")
 col1, col2 = st.sidebar.columns(2)
-freeze = col1.button("📌 Freeze State")
-reset = col2.button("♻ Reset All")
+freeze = col1.button("📌 Freeze")
+reset = col2.button("♻ Reset")
 
-# ================= Session State =================
+# ================= Session State Management =================
 if "frozen" not in st.session_state:
     st.session_state.frozen = []
 
@@ -30,91 +75,85 @@ if reset:
     st.session_state.frozen = []
     st.rerun()
 
-# ================= Physics Math =================
+# ================= Physics Calculations =================
 theta = omega * t + phi
-x = A * np.cos(theta)
-y = A * np.sin(theta)
-
+x_pos = A * np.cos(theta)
+y_pos = A * np.sin(theta)
 color_cycle = plt.cm.tab10.colors
 
 if freeze:
     idx = len(st.session_state.frozen)
     color = color_cycle[idx % len(color_cycle)]
-    # Store parameters: (omega, phase, amplitude, current_theta, color)
     st.session_state.frozen.append((omega, phi, A, theta, color))
 
-# ================= Plotting =================
-fig, (ax_c, ax_s) = plt.subplots(1, 2, figsize=(14, 6), gridspec_kw={"width_ratios": [1, 2]})
+# ================= Visualization =================
+plt.style.use('dark_background')
+fig, (ax_c, ax_s) = plt.subplots(1, 2, figsize=(15, 7), gridspec_kw={"width_ratios": [1, 1.7]})
+fig.patch.set_facecolor('#0d1117')
 
-# --- Left: Circular Motion (Phasor) ---
-circle = plt.Circle((0, 0), A, fill=False, linestyle="--", color="gray", alpha=0.5)
+# --- 1. Circular Motion Plot (Phasor) ---
+ax_c.set_facecolor('#0d1117')
+circle = plt.Circle((0, 0), A, fill=False, linestyle="--", color="#30363d", linewidth=1.5)
 ax_c.add_artist(circle)
-ax_c.axhline(0, color="black", linewidth=0.8)
-ax_c.axvline(0, color="black", linewidth=0.8)
+ax_c.axhline(0, color="#8b949e", linewidth=0.8)
+ax_c.axvline(0, color="#8b949e", linewidth=0.8)
 
 # Draw Frozen Phasors
 for ωf, φf, Af, θf, col in st.session_state.frozen:
-    xf = Af * np.cos(θf)
-    yf = Af * np.sin(θf)
-    ax_c.arrow(0, 0, xf, yf, color=col, head_width=0.1, length_includes_head=True, alpha=0.6)
+    ax_c.arrow(0, 0, Af * np.cos(θf), Af * np.sin(θf), color=col, head_width=0.1, alpha=0.3)
 
-# Draw Live Phasor (Red)
-ax_c.arrow(0, 0, x, y, color="red", head_width=0.15, length_includes_head=True, zorder=5)
+# Draw Live Phasor (r vector)
+ax_c.arrow(0, 0, x_pos, y_pos, color="#58a6ff", linewidth=2.5, head_width=0.15, length_includes_head=True, zorder=5)
 
-# Visual Projections (Dotted lines)
-ax_c.plot([x, x], [0, y], linestyle=":", color="red", alpha=0.3) # y-projection
-ax_c.plot([0, x], [y, y], linestyle=":", color="red", alpha=0.3) # x-projection
+# Projections & Labels (Matching your reference image)
+ax_c.arrow(0, 0, x_pos, 0, color="#3fb950", linewidth=2, head_width=0.12, length_includes_head=True) # Cos comp
+ax_c.plot([x_pos, x_pos], [0, y_pos], color="#a5d6ff", linestyle=":", alpha=0.6) # Sine vertical line
 
-ax_c.set_xlim(-5.5, 5.5)
-ax_c.set_ylim(-5.5, 5.5)
+# Text Annotations
+ax_c.text(x_pos/2, y_pos/2 + 0.3, r"$\vec{r}(t)$", color="#58a6ff", fontsize=14, fontweight='bold')
+ax_c.text(x_pos/2, -0.5, r"$|\vec{r}(t)|\cos\omega t$", color="#3fb950", fontsize=10, ha='center')
+ax_c.text(x_pos + 0.2, y_pos/2, r"$|\vec{r}(t)|\sin\omega t$", color="#a5d6ff", fontsize=10, rotation=90, va='center')
+
+# Angle Arc
+arc = Arc((0, 0), 0.8, 0.8, theta1=0, theta2=np.degrees(theta), color="#f0f6fc", linewidth=1.2)
+ax_c.add_patch(arc)
+ax_c.text(0.6*np.cos(theta/2), 0.6*np.sin(theta/2), r"$\theta$", color="#f0f6fc", fontsize=12)
+
+ax_c.set_xlim(-5.5, 5.5); ax_c.set_ylim(-5.5, 5.5)
 ax_c.set_aspect("equal")
-ax_c.set_xlabel("X (Cos Projection)")
-ax_c.set_ylabel("Y (Sin Projection)")
-ax_c.set_title("Uniform Circular Motion")
+ax_c.set_title("Uniform Circular Motion", color="#8b949e", pad=15)
 
-# --- Right: SHM Wave ---
+# --- 2. SHM Wave Plot ---
+ax_s.set_facecolor('#0d1117')
 t_vals = np.linspace(0, 10, 1000)
 
-# Logic for Wave drawing
+# Toggle Logic: Show solid wave ONLY if nothing is frozen
 if not st.session_state.frozen:
-    # No frozen states? Show the "Live Preview" wave
     y_live_wave = A * np.sin(omega * t_vals + phi)
-    ax_s.plot(t_vals, y_live_wave, color="black", linewidth=2, label="Live Preview")
+    ax_s.plot(t_vals, y_live_wave, color="white", linewidth=2, alpha=0.5, label="Live Path")
 else:
-    # Once frozen, show ONLY the frozen history
+    # Show only frozen dashed lines
     for ωf, φf, Af, θf, col in st.session_state.frozen:
         y_frozen = Af * np.sin(ωf * t_vals + φf)
-        ax_s.plot(t_vals, y_frozen, color=col, linestyle="--", linewidth=1.5)
+        ax_s.plot(t_vals, y_frozen, color=col, linestyle="--", linewidth=1.5, alpha=0.8)
 
-# Horizontal connector (Connects circle's Y to Wave's Y)
-# We use a connection line from the circle plot to the wave plot
-# In Streamlit/Matplotlib, we can simulate this with a marker at (0, y)
-ax_s.plot([0, t], [y, y], linestyle=":", color="red", alpha=0.5)
-ax_s.plot(t, y, marker="o", color="red", markersize=8, zorder=10)
+# Live point tracking
+ax_s.plot(t, y_pos, marker="o", color="#f85149", markersize=10, zorder=10)
+ax_s.axhline(y_pos, xmin=0, xmax=t/10, color="#f85149", linestyle=":", alpha=0.4)
 
-ax_s.set_xlim(0, 10)
-ax_s.set_ylim(-5.5, 5.5)
-ax_s.set_xlabel("Time (t)")
-ax_s.set_ylabel("Displacement y(t)")
-ax_s.set_title("SHM as Projection of UCM")
-ax_s.grid(True, alpha=0.3)
+ax_s.set_xlim(0, 10); ax_s.set_ylim(-5.5, 5.5)
+ax_s.set_title("Simple Harmonic Motion Projection", color="#8b949e", pad=15)
+ax_s.grid(color='#30363d', linestyle='--', linewidth=0.5)
 
 st.pyplot(fig)
 
-# ================= Math & Explanation =================
+# ================= Technical Details =================
 
 
-with st.expander("📐 Mathematical Relationship", expanded=True):
-    st.write("The vertical position $y(t)$ of a point moving in a circle is equivalent to Simple Harmonic Motion:")
-    st.latex(rf"y(t) = A \sin(\omega t + \phi)")
-    st.write(f"**Current Parameters:** $A={A}$, $\omega={omega}$, $\phi={phi_label}$")
-    
-    if st.session_state.frozen:
-        st.info(f"You have {len(st.session_state.frozen)} frozen state(s) displayed.")
+st.markdown("### 📐 Mathematical Relationship")
+st.latex(r"y(t) = A \sin(\omega t + \phi)")
 
-st.markdown("""
-**Instructions:**
-1. Adjust the **Amplitude** and **Frequency** to see the live red dot change.
-2. Click **Freeze State** to save the current wave path. 
-3. The solid black line will disappear on the first freeze, leaving only your saved paths!
-""")
+st.info(f"Currently tracking: Amplitude = {A} | Frequency = {omega} rad/s")
+
+if st.session_state.frozen:
+    st.success(f"Number of frozen states: {len(st.session_state.frozen)}")
