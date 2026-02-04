@@ -9,26 +9,30 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------- CSS Styling ----------------
+# ---------------- DARK THEME CSS ----------------
 st.markdown(
     """
     <style>
     .stApp {
-        background-color: #ffffff;
-        color: #000000;
+        background-color: #0e1117;
+        color: #e6e6e6;
     }
 
-    h1, h2, h3 {
-        color: #000000;
+    h1, h2, h3, h4 {
+        color: #ffffff;
     }
 
     .stSidebar {
-        background-color: #f3f3f3;
+        background-color: #161b22;
+    }
+
+    label, span, div {
+        color: #e6e6e6 !important;
     }
 
     div[data-testid="stMetric"] {
-        background-color: #ffffff;
-        border: 1px solid #dddddd;
+        background-color: #161b22;
+        border: 1px solid #30363d;
         padding: 12px;
         border-radius: 10px;
     }
@@ -70,19 +74,19 @@ theta = omega * t + phi
 x = A * np.cos(theta)
 y = A * np.sin(theta)
 
-# ---------------- Solved Numerical Results ----------------
-st.subheader("🔢 Solved Values (After Input)")
+# ---------------- Solved Values ----------------
+st.subheader("🔢 Solved Values")
 
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.metric("θ(t) = ωt + φ (rad)", f"{theta:.4f}")
+    st.metric("θ(t)  (rad)", f"{theta:.4f}")
 
 with col2:
-    st.metric("x(t) = A cos(θ)", f"{x:.4f}")
+    st.metric("x(t) = A cosθ", f"{x:.4f}")
 
 with col3:
-    st.metric("y(t) = A sin(θ)", f"{y:.4f}")
+    st.metric("y(t) = A sinθ", f"{y:.4f}")
 
 # ---------------- Freeze Handling ----------------
 color_cycle = plt.cm.tab10.colors
@@ -101,11 +105,12 @@ fig, (ax_c, ax_s) = plt.subplots(
     gridspec_kw={"width_ratios": [1, 2]}
 )
 
+# >>> KEEP GRAPHS WHITE <<<
 fig.patch.set_facecolor("white")
 ax_c.set_facecolor("white")
 ax_s.set_facecolor("white")
 
-# ================== CIRCULAR MOTION ==================
+# ================== UCM PHASOR ==================
 circle = plt.Circle((0, 0), A, fill=False, linestyle="--", linewidth=2)
 ax_c.add_artist(circle)
 
@@ -147,41 +152,33 @@ arc = Arc(
 )
 ax_c.add_patch(arc)
 
-ax_c.text(
-    0.35 * A * np.cos(theta / 2),
-    0.35 * A * np.sin(theta / 2),
-    r"$\theta = \omega t + \phi$",
-    fontsize=11
-)
-
 ax_c.set_aspect("equal")
 ax_c.set_xlim(-A - 0.5, A + 0.5)
 ax_c.set_ylim(-A - 0.5, A + 0.5)
 ax_c.set_xlabel("x")
 ax_c.set_ylabel("y")
 ax_c.set_title("Uniform Circular Motion (Phasor)")
-ax_c.grid(color="gray", alpha=0.2)
+ax_c.grid(color="gray", alpha=0.25)
 
-# ================== SHM GRAPH ==================
+# ================== SHM ==================
 t_vals = np.linspace(0, 10, 1000)
 
-# Frozen SHM waves
+# Frozen waves
 for ωf, φf, Af, _, _, sc, col in st.session_state.frozen:
     y_frozen = Af * sc * np.sin(ωf * t_vals + φf)
     ax_s.plot(t_vals, y_frozen, color=col, linewidth=1.6, alpha=0.8)
 
-# Live SHM wave
+# Live wave
 y_live = A * np.sin(omega * t_vals + phi)
-ax_s.plot(t_vals, y_live, color="black", linewidth=2.5, label="Live SHM")
+ax_s.plot(t_vals, y_live, color="black", linewidth=2.5)
 
-# Live point
 ax_s.plot(t, y, "ro")
 
 ax_s.set_xlim(0, 10)
 ax_s.set_ylim(-A - 0.5, A + 0.5)
 ax_s.set_xlabel("Time (t)")
 ax_s.set_ylabel("Displacement y(t)")
-ax_s.set_title("Simple Harmonic Motion (Projection of UCM)")
+ax_s.set_title("Simple Harmonic Motion")
 ax_s.grid(color="gray", alpha=0.25)
 
 st.pyplot(fig)
