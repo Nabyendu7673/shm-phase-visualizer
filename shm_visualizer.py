@@ -12,7 +12,7 @@ st.markdown(
     <style>
     .stApp { background-color: #0e1117; color: #e6e6e6; }
     .stSidebar { background-color: #161b22; }
-    h1, h2, h3, h4 { color: white; }
+    h1, h2, h3 { color: white; }
     label, span, div { color: #e6e6e6 !important; }
     div[data-testid="stMetric"] {
         background-color: #161b22;
@@ -61,13 +61,15 @@ c1.metric("θ(t) (rad)", f"{theta:.4f}")
 c2.metric("x(t)", f"{x:.4f}")
 c3.metric("y(t)", f"{y:.4f}")
 
-# ---------------- Freeze ----------------
+# ---------------- Freeze Handling ----------------
 color_cycle = plt.cm.tab10.colors
 if freeze:
     idx = len(st.session_state.frozen)
     scale = max(1 - 0.08 * idx, 0.45)
     color = color_cycle[idx % len(color_cycle)]
-    st.session_state.frozen.append((omega, phi, A, t, theta, scale, color))
+    st.session_state.frozen.append(
+        (omega, phi, A, t, theta, scale, color)
+    )
 
 # ---------------- Figure ----------------
 fig, (ax_c, ax_s) = plt.subplots(
@@ -75,19 +77,21 @@ fig, (ax_c, ax_s) = plt.subplots(
     gridspec_kw={"width_ratios": [1, 2]}
 )
 
-# White graph background
 fig.patch.set_facecolor("white")
 ax_c.set_facecolor("white")
 ax_s.set_facecolor("white")
 
-# ===== FORCE GRAPH TEXT TO BLACK =====
+# Force black axes text
 for ax in [ax_c, ax_s]:
     ax.tick_params(colors="black")
     ax.xaxis.label.set_color("black")
     ax.yaxis.label.set_color("black")
     ax.title.set_color("black")
+    for spine in ax.spines.values():
+        spine.set_color("black")
+        spine.set_linewidth(1.2)
 
-# ================== UCM GRAPH ==================
+# ================== UCM PHASOR ==================
 circle = plt.Circle((0, 0), A, fill=False, linestyle="--", linewidth=2, color="black")
 ax_c.add_artist(circle)
 
@@ -107,14 +111,18 @@ for ωf, φf, Af, _, θf, sc, col in st.session_state.frozen:
     )
 
 # Live phasor
-ax_c.arrow(0, 0, x, y, color="red",
-           head_width=0.08 * A, length_includes_head=True)
+ax_c.arrow(
+    0, 0, x, y,
+    color="red",
+    head_width=0.08 * A,
+    length_includes_head=True
+)
 
 # Projections
 ax_c.plot([x, x], [0, y], ":", color="gray")
 ax_c.plot([0, x], [0, 0], ":", color="gray")
 
-# Angle arc + text
+# Angle arc
 arc = Arc((0, 0), 0.6*A, 0.6*A,
           theta1=0, theta2=np.degrees(theta),
           linewidth=1.5, color="black")
@@ -123,7 +131,7 @@ ax_c.add_patch(arc)
 ax_c.text(
     0.35*A*np.cos(theta/2),
     0.35*A*np.sin(theta/2),
-    r"$\theta=\omega t + \phi$",
+    r"$\theta=\omega t+\phi$",
     color="black"
 )
 
@@ -135,29 +143,33 @@ ax_c.set_ylabel("y")
 ax_c.set_title("Uniform Circular Motion (Phasor)")
 ax_c.grid(color="gray", alpha=0.3)
 
-# ================== SHM GRAPH ==================
+# ================== SHM (FROZEN ONLY) ==================
 t_vals = np.linspace(0, 10, 1000)
 
+# Frozen SHM waves ONLY
 for ωf, φf, Af, _, _, sc, col in st.session_state.frozen:
-    ax_s.plot(t_vals, Af*sc*np.sin(ωf*t_vals + φf),
-              color=col, linewidth=1.6, alpha=0.8)
+    ax_s.plot(
+        t_vals,
+        Af * sc * np.sin(ωf * t_vals + φf),
+        color=col,
+        linewidth=2.0,
+        alpha=0.9
+    )
 
-ax_s.plot(t_vals, A*np.sin(omega*t_vals + phi),
-          color="black", linewidth=2.5)
-
-ax_s.plot(t, y, "ro")
+# Live moving point ONLY
+ax_s.plot(t, y, "ro", markersize=7)
 
 ax_s.set_xlim(0, 10)
-ax_s.set_ylim(-A-0.5, A+0.5)
+ax_s.set_ylim(-A - 0.5, A + 0.5)
 ax_s.set_xlabel("Time (t)")
 ax_s.set_ylabel("Displacement y(t)")
-ax_s.set_title("Simple Harmonic Motion")
+ax_s.set_title("Simple Harmonic Motion (Frozen States)")
 ax_s.grid(color="gray", alpha=0.3)
 
 st.pyplot(fig)
 
 # ---------------- Mathematics ----------------
-with st.expander("📐 Mathematical Description", expanded=True):
+with st.expander(" Mathematical Description", expanded=True):
     st.latex(r"\theta(t) = \omega t + \phi")
     st.latex(rf"\theta(t) = {omega:.2f}({t:.2f}) + {phi:.2f} = {theta:.4f}")
     st.latex(rf"y(t) = {A:.2f}\sin(\omega t + \phi) = {y:.4f}")
