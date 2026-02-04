@@ -2,138 +2,122 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 
-st.set_page_config(layout="wide")
-
-# ---------------------------
-# Sidebar Controls
-# ---------------------------
-st.sidebar.header("Control Parameters")
-
-A = st.sidebar.slider("Amplitude (A)", 0.5, 2.0, 1.0, 0.1)
-omega = st.sidebar.slider("Angular Frequency ω (rad/s)", 0.5, 5.0, 1.0, 0.1)
-phi = st.sidebar.slider("Initial Phase φ (rad)", 0.0, 2*np.pi, 0.0, 0.01)
-
-theta = st.sidebar.slider(
-    "Instantaneous Phase θ (rad)",
-    0.0, 2*np.pi, 0.0, 0.01
+# ---------------- Page Config ----------------
+st.set_page_config(
+    page_title="SHM as Phase Projection of UCM",
+    layout="wide"
 )
 
-freeze = st.sidebar.button("❄️ Freeze Current State")
-clear = st.sidebar.button("🗑️ Clear All Frozen States")
+st.title("Harmonic Motion as a Phase Projection of Uniform Circular Motion")
 
-# ---------------------------
-# State storage
-# ---------------------------
-if "frozen_theta" not in st.session_state:
-    st.session_state.frozen_theta = []
+# ---------------- Sidebar Controls ----------------
+st.sidebar.header("Physical Parameters")
 
-if freeze:
-    st.session_state.frozen_theta.append(theta)
+A = st.sidebar.slider("Amplitude / Radius (A)", 0.5, 5.0, 2.0, 0.1)
+omega = st.sidebar.slider("Angular Frequency (ω)", 0.1, 5.0, 1.0, 0.1)
 
-if clear:
-    st.session_state.frozen_theta = []
+phi_map = {
+    "0": 0.0,
+    "π/2": np.pi / 2,
+    "π": np.pi,
+    "3π/2": 3 * np.pi / 2
+}
+phi_label = st.sidebar.selectbox("Initial Phase (φ)", list(phi_map.keys()))
+phi = phi_map[phi_label]
 
-# ---------------------------
-# Phase definition
-# ---------------------------
-theta_eff = theta + phi
+t = st.sidebar.slider("Time (t)", 0.0, 10.0, 0.01)
 
-# ---------------------------
-# Layout
-# ---------------------------
-st.title("Simple Harmonic Motion as Projection of Uniform Circular Motion")
+# Freeze buttons
+freeze_circle = st.sidebar.button("📌 Freeze Phasor Position")
+freeze_wave = st.sidebar.button("📌 Freeze Sine Point")
+reset = st.sidebar.button("♻ Reset All Freezes")
 
-st.markdown(
-r"""
-### Mathematical Description
+# ---------------- Session State ----------------
+if "circle_points" not in st.session_state:
+    st.session_state.circle_points = []
 
-**Instantaneous Phase**
-\[
-\theta(t) = \omega t + \phi
-\]
+if "wave_points" not in st.session_state:
+    st.session_state.wave_points = []
 
-**Displacement of SHM (Projection of UCM)**
-\[
-y(t) = A \sin\theta
-\]
-"""
+if reset:
+    st.session_state.circle_points = []
+    st.session_state.wave_points = []
+
+# ---------------- Physics ----------------
+theta = omega * t + phi
+x = A * np.cos(theta)
+y = A * np.sin(theta)
+
+if freeze_circle:
+    st.session_state.circle_points.append((x, y))
+
+if freeze_wave:
+    st.session_state.wave_points.append((t, y))
+
+# ---------------- Layout ----------------
+fig, (ax_circle, ax_wave) = plt.subplots(
+    1, 2, figsize=(14, 6), gridspec_kw={"width_ratios": [1, 2]}
 )
 
-col1, col2 = st.columns(2)
+# ================= LEFT: CIRCLE =================
+circle = plt.Circle((0, 0), A, fill=False, linestyle="--", linewidth=2)
+ax_circle.add_artist(circle)
 
-# ===========================
-# Circular Motion Plot
-# ===========================
-with col1:
-    fig1, ax1 = plt.subplots(figsize=(5,5))
+# Current phasor
+ax_circle.arrow(
+    0, 0, x, y,
+    head_width=0.08 * A,
+    head_length=0.12 * A,
+    length_includes_head=True,
+    color="red"
+)
 
-    # Circle
-    t = np.linspace(0, 2*np.pi, 400)
-    ax1.plot(A*np.cos(t), A*np.sin(t), color="gray")
+# Projection line
+ax_circle.plot([x, x], [0, y], linestyle=":", color="blue")
 
-    # Axes
-    ax1.axhline(0, color="black", linewidth=0.8)
-    ax1.axvline(0, color="black", linewidth=0.8)
+# Frozen phasors
+for xf, yf in st.session_state.circle_points:
+    ax_circle.plot(xf, yf, "ro", alpha=0.6)
 
-    # Current phasor
-    x = A * np.cos(theta_eff)
-    y = A * np.sin(theta_eff)
+ax_circle.set_aspect("equal")
+ax_circle.set_xlim(-A - 0.5, A + 0.5)
+ax_circle.set_ylim(-A - 0.5, A + 0.5)
+ax_circle.set_title("Uniform Circular Motion (Phasor Representation)")
+ax_circle.set_xlabel("x")
+ax_circle.set_ylabel("y")
+ax_circle.grid(alpha=0.3)
 
-    ax1.arrow(
-        0, 0, x, y,
-        head_width=0.08,
-        length_includes_head=True,
-        color="blue"
-    )
+# ================= RIGHT: SINE WAVE =================
+t_vals = np.linspace(0, 10, 1000)
+y_vals = A * np.sin(omega * t_vals + phi)
 
-    # Projection
-    ax1.plot([x, x], [0, y], linestyle="dashed", color="gray")
+ax_wave.plot(t_vals, y_vals, color="black", linewidth=2)
+ax_wave.plot(t, y, "ro")
 
-    # Frozen phasors
-    for th in st.session_state.frozen_theta:
-        th_eff = th + phi
-        xf = A*np.cos(th_eff)
-        yf = A*np.sin(th_eff)
-        ax1.arrow(0, 0, xf, yf, color="red", alpha=0.5, head_width=0.05)
+# Frozen sine points
+for tf, yf in st.session_state.wave_points:
+    ax_wave.plot(tf, yf, "ro", alpha=0.6)
 
-    ax1.set_aspect("equal")
-    ax1.set_xlim(-A-0.3, A+0.3)
-    ax1.set_ylim(-A-0.3, A+0.3)
-    ax1.set_title("Uniform Circular Motion (Phasor Representation)")
-    ax1.set_xlabel("x")
-    ax1.set_ylabel("y")
+ax_wave.axhline(0, color="gray", linewidth=1)
+ax_wave.set_xlim(0, 10)
+ax_wave.set_ylim(-A - 0.5, A + 0.5)
+ax_wave.set_title("Simple Harmonic Motion (Projection on Diameter)")
+ax_wave.set_xlabel("Time (t)")
+ax_wave.set_ylabel("Displacement y(t)")
+ax_wave.grid(alpha=0.3)
 
-    st.pyplot(fig1)
+st.pyplot(fig)
 
-# ===========================
-# Sine Wave Plot
-# ===========================
-with col2:
-    fig2, ax2 = plt.subplots(figsize=(6,4))
+# ---------------- Mathematical Description ----------------
+with st.expander("📐 Mathematical Description", expanded=True):
+    st.latex(r"\textbf{Instantaneous phase of the particle:}")
+    st.latex(r"\theta(t) = \omega t + \phi")
 
-    theta_range = np.linspace(0, 2*np.pi, 400)
-    y_wave = A * np.sin(theta_range)
+    st.latex(r"\textbf{Displacement in simple harmonic motion (projection of uniform circular motion):}")
+    st.latex(r"y(t) = A \sin\bigl[\theta(t)\bigr] = A \sin(\omega t + \phi)")
 
-    ax2.plot(theta_range, y_wave, label=r"$y = A\sin\theta$")
-
-    # Current point
-    ax2.plot(theta_eff % (2*np.pi), A*np.sin(theta_eff), "ko")
-
-    # Frozen points
-    for th in st.session_state.frozen_theta:
-        th_eff = th + phi
-        ax2.plot(
-            th_eff % (2*np.pi),
-            A*np.sin(th_eff),
-            "ro",
-            alpha=0.6
-        )
-
-    ax2.set_xlim(0, 2*np.pi)
-    ax2.set_ylim(-A-0.2, A+0.2)
-    ax2.set_xlabel("Phase θ (rad)")
-    ax2.set_ylabel("Displacement y")
-    ax2.set_title("Sinusoidal Waveform (SHM)")
-    ax2.grid(True)
-
-    st.pyplot(fig2)
+# ---------------- Interpretation ----------------
+st.info(
+    f"At time t = {t:.2f}, the phase is θ(t) = {theta:.2f} rad. "
+    f"The vertical projection of the rotating radius gives y(t) = {y:.2f}."
+)
